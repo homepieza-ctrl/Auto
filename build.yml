@@ -1,0 +1,32 @@
+name: Build APK
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar archivos del proyecto
+        run: |
+          ls -la
+          for f in settings.gradle build.gradle app/build.gradle app/src/main/AndroidManifest.xml; do
+            [ -f "$f" ] || { echo "::error::Falta el archivo $f en el repositorio. Sube todo el contenido del zip a la raiz."; exit 1; }
+          done
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.5
+          cache-disabled: true
+      - name: Aceptar licencias Android
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Compilar APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LauncherDD-apk
+          path: app/build/outputs/apk/debug/*.apk
